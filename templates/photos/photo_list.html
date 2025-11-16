@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}照片庫{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Hero Section -->
+    <div class="hero-section rounded mb-5">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="fas fa-images"></i> 探索照片
+        </h1>
+        <p class="lead">發現全球攝影愛好者分享的精彩瞬間</p>
+        <!-- Large search form in hero (replaces upload CTA) -->
+        <form method="get" action="{% url 'photos:home' %}" class="d-flex justify-content-center mt-4">
+            <div class="input-group" style="max-width:720px; width:100%;">
+                <input name="q" type="search" class="form-control form-control-lg" placeholder="搜尋照片、標題、標籤或用戶名稱..." aria-label="搜尋照片" value="{{ search_query|default:'' }}">
+                <button class="btn btn-light btn-lg" type="submit"><i class="fas fa-search"></i></button>
+            </div>
+        </form>
+
+        {% if user.is_authenticated %}
+            <div class="text-center mt-3">
+                <a href="{% url 'photos:upload' %}" class="btn btn-outline-light">
+                    <i class="fas fa-cloud-upload-alt"></i> 上傳新照片
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Search summary -->
+    {% if search_query %}
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    搜尋 "<strong>{{ search_query }}</strong>" - 找到 <strong>{{ search_count }}</strong> 筆結果。
+                    <a href="{% url 'photos:home' %}" class="ms-3">清除搜尋</a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Categories Filter -->
+    {% if categories %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5>分類瀏覽</h5>
+                <div class="btn-group flex-wrap" role="group">
+                    <a href="{% url 'photos:home' %}" class="btn btn-outline-primary">全部</a>
+                    {% for category in categories %}
+                        <a href="{% url 'photos:category' category.id %}" class="btn btn-outline-primary">
+                            {{ category.icon }} {{ category.name }}
+                        </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Photos Grid -->
+    <div class="row g-4">
+        {% if page_obj %}
+            {% for photo in page_obj %}
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <a href="{% url 'photos:detail' photo.id %}" class="text-decoration-none">
+                        <div class="card photo-card h-100">
+                            <div class="photo-img-container position-relative">
+                                {% if photo.thumbnail %}
+                                    <img src="{{ photo.thumbnail.url }}" alt="{{ photo.title }}" loading="lazy">
+                                {% else %}
+                                    <img src="{{ photo.image.url }}" alt="{{ photo.title }}" loading="lazy">
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-2 badge bg-primary">
+                                    <i class="fas fa-eye"></i> {{ photo.view_count }}
+                                </div>
+                                <!-- Share button: prevent link navigation and trigger share/copy -->
+                                <button type="button" class="btn btn-sm btn-light position-absolute top-0 start-0 m-2 share-btn"
+                                        data-url="{% url 'photos:detail' photo.id %}"
+                                        data-title="{{ photo.title|escapejs }}"
+                                        aria-label="分享照片"
+                                        onclick="event.preventDefault(); event.stopPropagation(); sharePhoto(this.dataset.url, this.dataset.title)">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title text-truncate text-dark">{{ photo.title }}</h6>
+                                <p class="card-text small text-muted text-truncate">
+                                    由 <strong>{{ photo.owner.username }}</strong> 上傳
+                                </p>
+                                {% if photo.tags.all %}
+                                    <div class="small">
+                                        {% for tag in photo.tags.all|slice:":2" %}
+                                            <span class="badge bg-secondary">{{ tag.name }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                <p class="text-muted">還沒有照片。<a href="{% url 'photos:upload' %}">上傳第一張照片吧！</a></p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">首頁</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一頁</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">下一頁</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">末頁</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+    <script>
+        // Share handler: use Web Share API when available, otherwise copy URL to clipboard
+        function sharePhoto(path, title) {
+            try {
+                const fullUrl = window.location.origin + path;
+
+                if (navigator.share) {
+                    navigator.share({
+                        title: title || document.title,
+                        url: fullUrl
+                    }).then(() => {
+                        showToast('已啟動分享介面');
+                    }).catch((err) => {
+                        // If user cancels or error, fallback to copy
+                        navigator.clipboard.writeText(fullUrl).then(() => showToast('已複製連結')).catch(() => showToast('無法複製連結'));
+                    });
+                } else if (navigator.clipboard) {
+                    navigator.clipboard.writeText(fullUrl).then(() => {
+                        showToast('已複製分享連結');
+                    }).catch(() => {
+                        fallbackCopyText(fullUrl);
+                    });
+                } else {
+                    fallbackCopyText(fullUrl);
+                }
+            } catch (e) {
+                console.error('分享失敗', e);
+                showToast('分享失敗');
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showToast('已複製分享連結');
+            } catch (err) {
+                showToast('請手動複製連結: ' + text);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showToast(message) {
+            const id = 'share-toast-' + Date.now();
+            const toast = document.createElement('div');
+            toast.id = id;
+            toast.className = 'alert alert-success position-fixed';
+            toast.style.zIndex = 2000;
+            toast.style.right = '20px';
+            toast.style.bottom = '20px';
+            toast.style.minWidth = '180px';
+            toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            toast.innerText = message;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                try { document.body.removeChild(toast); } catch (e) {}
+            }, 2500);
+        }
+    </script>
+{% endblock %}

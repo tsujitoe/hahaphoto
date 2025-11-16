@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ photo.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Photo Display -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body p-0">
+                    <div style="aspect-ratio: 16/9; overflow: hidden; background-color: #000;">
+                        {% if photo.image %}
+                            <img src="{{ photo.image.url }}" alt="{{ photo.title }}" style="width: 100%; height: 100%; object-fit: contain;">
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Info -->
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h1 class="card-title h3 mb-3">{{ photo.title }}</h1>
+                    
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-calendar"></i> {{ photo.created_at|date:"Y年m月d日 H:i" }}
+                    </p>
+
+                    <!-- Author Info -->
+                    <div class="d-flex align-items-center mb-4 p-3 bg-light rounded">
+                        {% if photo.owner.profile.avatar %}
+                            <img src="{{ photo.owner.profile.avatar.url }}" alt="{{ photo.owner.username }}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                        {% else %}
+                            <i class="fas fa-user-circle fa-2x text-muted me-3"></i>
+                        {% endif %}
+                        <div>
+                            <a href="{% url 'accounts:profile' photo.owner.id %}" class="d-block fw-bold text-decoration-none text-dark">
+                                {{ photo.owner.get_full_name|default:photo.owner.username }}
+                            </a>
+                            <small class="text-muted">@{{ photo.owner.username }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="row text-center mb-4">
+                        <div class="col-4">
+                            <div class="text-muted small">瀏覽</div>
+                            <div class="h5 mb-0">{{ photo.view_count }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">分辨率</div>
+                            <div class="h5 mb-0">{{ photo.width }}×{{ photo.height }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">大小</div>
+                            <div class="h5 mb-0">{{ photo.file_size|filesizeformat }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Category & Tags -->
+                    {% if photo.category or photo.tags.all %}
+                        <div class="mb-4">
+                            {% if photo.category %}
+                                <p class="mb-2">
+                                    <strong>分類：</strong>
+                                    <a href="{% url 'photos:category' photo.category.id %}" class="badge bg-primary text-decoration-none">
+                                        {{ photo.category.icon }} {{ photo.category.name }}
+                                    </a>
+                                </p>
+                            {% endif %}
+                            {% if photo.tags.all %}
+                                <p class="mb-0">
+                                    <strong>標籤：</strong><br>
+                                    {% for tag in photo.tags.all %}
+                                        <a href="{% url 'photos:tag' tag.name %}" class="badge bg-secondary text-decoration-none me-1 mb-1">
+                                            {{ tag.name }}
+                                        </a>
+                                    {% endfor %}
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    <!-- Action Buttons -->
+                    {% if request.user == photo.owner %}
+                        <div class="d-grid gap-2 mb-3">
+                            <a href="{% url 'photos:edit' photo.id %}" class="btn btn-primary">
+                                <i class="fas fa-edit"></i> 編輯
+                            </a>
+                            <a href="{% url 'photos:delete' photo.id %}" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> 刪除
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <div class="border-top pt-3">
+                        <i class="fas fa-lock text-muted"></i>
+                        <small class="text-muted">
+                            隱私設定：<strong>{{ photo.get_privacy_display }}</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Photos -->
+            {% if related_photos %}
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">相關照片</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-2">
+                            {% for related in related_photos %}
+                                <div class="col-6">
+                                    <a href="{% url 'photos:detail' related.id %}" class="text-decoration-none">
+                                        <div style="aspect-ratio: 1; overflow: hidden; border-radius: 0.5rem; background-color: #f0f0f0;">
+                                            {% if related.thumbnail %}
+                                                <img src="{{ related.thumbnail.url }}" alt="{{ related.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                            {% else %}
+                                                <img src="{{ related.image.url }}" alt="{{ related.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-dark d-block mt-2 text-truncate">{{ related.title }}</small>
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Description -->
+    {% if photo.description %}
+        <div class="row mt-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">描述</h5>
+                        <p class="card-text">{{ photo.description|linebreaks }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

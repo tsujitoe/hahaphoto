@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}上傳照片{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-body p-5">
+                    <h2 class="card-title text-center mb-4">
+                        <i class="fas fa-cloud-upload-alt"></i> 上傳新照片
+                    </h2>
+
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+
+                        <!-- Image Preview -->
+                        <div class="mb-4">
+                            <div id="imagePreview" class="border-dashed border-3 rounded p-5 text-center bg-light" style="cursor: pointer; min-height: 200px; display: flex; align-items: center; justify-content: center;">
+                                <div>
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                                    <p class="text-muted mb-2">點擊或拖放圖片到這裡</p>
+                                    <small class="text-muted">支持 JPG、PNG、GIF、WebP 格式，最大 10MB</small>
+                                    <div id="fileName" class="mt-3 text-success d-none"></div>
+                                </div>
+                            </div>
+                            {{ form.image }}
+                            {% if form.image.errors %}
+                                <div class="alert alert-danger mt-2">
+                                    {{ form.image.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_title" class="form-label">照片標題 <span class="text-danger">*</span></label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_description" class="form-label">照片描述</label>
+                            {{ form.description }}
+                            <small class="text-muted">可選，用幾句話描述這張照片</small>
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_category" class="form-label">分類</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.category.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="id_privacy" class="form-label">隱私設定 <span class="text-danger">*</span></label>
+                                {{ form.privacy }}
+                                {% if form.privacy.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.privacy.errors.0 }}</div>
+                                {% endif %}
+                                <small class="text-muted d-block mt-1">
+                                    • 公開：所有人可見<br>
+                                    • 私人：只有您能看
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_tags" class="form-label">標籤</label>
+                            {{ form.tags }}
+                            <small class="text-muted">用逗號分隔多個標籤，如：風景,建築,肖像</small>
+                            {% if form.tags.errors %}
+                                <div class="invalid-feedback d-block">{{ form.tags.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-upload"></i> 上傳照片
+                            </button>
+                            <a href="{% url 'photos:home' %}" class="btn btn-secondary btn-lg">
+                                <i class="fas fa-times"></i> 取消
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-dashed {
+        border-style: dashed !important;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+    }
+    
+    #id_image {
+        display: none;
+    }
+    
+    .invalid-feedback {
+        color: #dc3545;
+        font-size: 0.875rem;
+    }
+</style>
+
+<script>
+    const imagePreview = document.getElementById('imagePreview');
+    const fileInput = document.getElementById('id_image');
+    const fileName = document.getElementById('fileName');
+
+    // Click to select file
+    imagePreview.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    // Drag and drop
+    imagePreview.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        imagePreview.classList.add('bg-info', 'bg-opacity-10');
+    });
+
+    imagePreview.addEventListener('dragleave', () => {
+        imagePreview.classList.remove('bg-info', 'bg-opacity-10');
+    });
+
+    imagePreview.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imagePreview.classList.remove('bg-info', 'bg-opacity-10');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFilePreview();
+        }
+    });
+
+    // File input change
+    fileInput.addEventListener('change', updateFilePreview);
+
+    function updateFilePreview() {
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                imagePreview.innerHTML = `<img src="${e.target.result}" style="max-width: 100%; max-height: 400px; border-radius: 0.5rem;">`;
+            };
+            
+            reader.readAsDataURL(file);
+            
+            // Show file name
+            fileName.textContent = `選中文件：${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            fileName.classList.remove('d-none');
+        }
+    }
+</script>
+{% endblock %}

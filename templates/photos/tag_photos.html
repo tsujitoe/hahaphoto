@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}標籤 #{{ tag.name }} - 照片庫{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Tag Header -->
+    <div class="card mb-5 bg-light">
+        <div class="card-body text-center py-5">
+            <h1 class="mb-3">
+                <span class="badge bg-primary" style="font-size: 2rem; padding: 1rem;">
+                    #{{ tag.name }}
+                </span>
+            </h1>
+            <p class="text-muted mb-0">找到 {{ page_obj.paginator.count }} 張標籤為 "{{ tag.name }}" 的照片</p>
+        </div>
+    </div>
+
+    <!-- Photos Grid -->
+    <div class="row g-4">
+        {% if page_obj %}
+            {% for photo in page_obj %}
+                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                    <a href="{% url 'photos:detail' photo.id %}" class="text-decoration-none">
+                        <div class="card photo-card h-100">
+                            <div class="photo-img-container">
+                                {% if photo.thumbnail %}
+                                    <img src="{{ photo.thumbnail.url }}" alt="{{ photo.title }}" loading="lazy">
+                                {% else %}
+                                    <img src="{{ photo.image.url }}" alt="{{ photo.title }}" loading="lazy">
+                                {% endif %}
+                                <div class="position-absolute top-0 end-0 m-2 badge bg-primary">
+                                    <i class="fas fa-eye"></i> {{ photo.view_count }}
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-title text-truncate text-dark">{{ photo.title }}</h6>
+                                <p class="card-text small text-muted text-truncate">
+                                    由 <strong>{{ photo.owner.username }}</strong> 上傳
+                                </p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-image fa-3x text-muted mb-3"></i>
+                <p class="text-muted">沒有找到標籤為 "{{ tag.name }}" 的照片。</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-5">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">首頁</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">上一頁</a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 頁
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">下一頁</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">末頁</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+{% endblock %}
