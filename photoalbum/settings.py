@@ -31,7 +31,10 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-productio
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=None)
+if not ALLOWED_HOSTS:
+    # Support both `ALLOWED_HOSTS` and `DJANGO_ALLOWED_HOSTS` environment variable names
+    ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
 
 
 
@@ -99,6 +102,15 @@ DATABASES = {
 # Example: postgres://USER:PASSWORD@HOST:PORT/NAME
 DATABASE_URL = env('DATABASE_URL', default=None)
 if DATABASE_URL:
+    # Some libraries (and Cloud SQL connection helpers) may provide a scheme
+    # like 'postgresql+psycopg2://...'. django-environ / dj-database-url
+    # expect 'postgres://' or 'postgresql://' so normalize the value first.
+    raw_db_url = DATABASE_URL
+    if raw_db_url.startswith('postgresql+psycopg2://'):
+        raw_db_url = raw_db_url.replace('postgresql+psycopg2://', 'postgres://', 1)
+        # Update the env var so env.db() picks up the normalized value
+        os.environ['DATABASE_URL'] = raw_db_url
+
     # django-environ can parse the DATABASE_URL
     DATABASES = {
         'default': env.db('DATABASE_URL')
