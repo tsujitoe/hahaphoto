@@ -1,0 +1,12 @@
+Django==4.2
+Pillow==10.4.0
+django-environ==0.11.2
+psycopg2-binary==2.9.10
+python-dotenv==1.0.0
+
+# Deployment / production
+gunicorn>=20.1.0
+dj-database-url>=1.0.0
+django-storages[boto3]>=1.13.1
+google-cloud-storage>=2.10.0
+whitenoise>=6.5.0
