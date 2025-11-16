@@ -4,6 +4,8 @@ from django.core.validators import FileExtensionValidator
 from django.utils.translation import gettext_lazy as _
 from PIL import Image
 import os
+from io import BytesIO
+from django.core.files.base import ContentFile
 
 
 class PhotoCategory(models.Model):
@@ -108,11 +110,19 @@ class Photo(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Generate thumbnail and optimize image
+        # Generate thumbnail and optimize image (only if not using cloud storage or if local path available)
         if self.image:
-            self._generate_thumbnail()
-            self._optimize_image()
-            self._extract_image_info()
+            try:
+                self._generate_thumbnail()
+                self._optimize_image()
+                self._extract_image_info()
+            except (OSError, AttributeError) as e:
+                # GCS and other cloud storage backends don't support .path or save to local filesystem
+                # Fall back to just extracting metadata from the file
+                try:
+                    self._extract_image_info_from_file()
+                except Exception as extract_err:
+                    print(f"Warning: Could not extract image info: {extract_err}")
 
     def _generate_thumbnail(self):
         """Generate a thumbnail from the original image"""
@@ -147,7 +157,7 @@ class Photo(models.Model):
             print(f"Error optimizing image: {e}")
 
     def _extract_image_info(self):
-        """Extract width and height from image"""
+        """Extract width and height from image (local file)"""
         try:
             img = Image.open(self.image.path)
             self.width = img.width
@@ -155,6 +165,17 @@ class Photo(models.Model):
             super().save(update_fields=['width', 'height'])
         except Exception as e:
             print(f"Error extracting image info: {e}")
+
+    def _extract_image_info_from_file(self):
+        """Extract width and height from image (file-like object, works with cloud storage)"""
+        try:
+            # Read from the file object directly (works with GCS, S3, etc.)
+            img = Image.open(self.image.file)
+            self.width = img.width
+            self.height = img.height
+            super().save(update_fields=['width', 'height'])
+        except Exception as e:
+            print(f"Error extracting image info from file object: {e}")
 
     def increment_view_count(self):
         """Increment the view count"""
