@@ -29,7 +29,10 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=True)
+# Prefer `DJANGO_DEBUG`, fall back to `DEBUG`. Default to False in production.
+DEBUG = env.bool('DJANGO_DEBUG', default=None)
+if DEBUG is None:
+    DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=None)
 if not ALLOWED_HOSTS:
@@ -178,6 +181,22 @@ else:
             MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     except Exception:
         pass
+
+# CSRF: trusted origins. Try explicit env var first, otherwise build from ALLOWED_HOSTS.
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=None)
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = []
+    for host in ALLOWED_HOSTS:
+        # Only add valid host entries
+        if host and host not in ('localhost', '127.0.0.1'):
+            scheme = 'https' if not DEBUG else 'http'
+            CSRF_TRUSTED_ORIGINS.append(f"{scheme}://{host}")
+
+# Security headers for proxies (Cloud Run terminates TLS and forwards via X-Forwarded-Proto)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_SSL_REDIRECT = not DEBUG
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
